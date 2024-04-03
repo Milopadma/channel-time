@@ -1,80 +1,45 @@
+// popup.tsx
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import WatchTimeData from "./watchtimedata";
+import { WatchTimeData } from "./types";
 
-const WatchTimeContext = React.createContext<Record<string, number>>({});
-
-const Popup = ({
-  watchTimeData,
-}: {
-  watchTimeData: Record<string, number>;
-}) => {
-  const [count, setCount] = useState(0);
-  const [currentURL, setCurrentURL] = useState<string>();
+const Popup: React.FC = () => {
+  const [watchTimeData, setWatchTimeData] = useState<WatchTimeData>({});
 
   useEffect(() => {
-    chrome.action.setBadgeText({ text: count.toString() });
-  }, [count]);
+    const port = chrome.runtime.connect({ name: "watch-time-data" });
 
-  useEffect(() => {
-    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      setCurrentURL(tabs[0].url);
+    port.onMessage.addListener((data: WatchTimeData) => {
+      setWatchTimeData(data);
     });
+
+    port.postMessage({ action: "getWatchTimeData" });
   }, []);
 
-  const changeBackground = () => {
-    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      const tab = tabs[0];
-      if (tab.id) {
-        chrome.tabs.sendMessage(
-          tab.id,
-          {
-            color: "#555555",
-          },
-          (msg) => {
-            console.log("result message:", msg);
-          }
-        );
-      }
-    });
-  };
-
   return (
-    <>
-      <ul style={{ minWidth: "700px" }}>
-        <li>Current URL: {currentURL}</li>
-        <li>Current Time: {new Date().toLocaleTimeString()}</li>
-      </ul>
-      <button
-        onClick={() => setCount(count + 1)}
-        style={{ marginRight: "5px" }}
-      >
-        count up
-      </button>
-      <div>hello world</div>
-      <div> {watchTimeData.toString()} </div>
-      {
-        <WatchTimeContext.Provider value={watchTimeData}>
-          <div> {watchTimeData.toString()} </div>
-        </WatchTimeContext.Provider>
-      }
-      <WatchTimeData watchTimeData={watchTimeData} />
-      <button onClick={changeBackground}>change background</button>
-    </>
+    <div>
+      <h2>Watch Time by Channel</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Channel Name</th>
+            <th>Watch Time (ms)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(watchTimeData).map(
+            ([channelName, watchTime], index) => (
+              <tr key={index}>
+                <td>{channelName}</td>
+                <td>{watchTime}</td>
+              </tr>
+            )
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 };
 
 const root = createRoot(document.getElementById("root")!);
-
-const port = chrome.runtime.connect({ name: "watch-time-data" });
-
-port.onMessage.addListener((watchTimeData) => {
-  root.render(
-    <React.StrictMode>
-      <Popup watchTimeData={watchTimeData} />
-    </React.StrictMode>
-  );
-});
-
-// Add a message to the background script to request the watch time data
-port.postMessage({ action: "getWatchTimeData" });
+root.render(<Popup />);
