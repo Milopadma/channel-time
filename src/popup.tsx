@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import WatchTimeData from "./watchtimedata";
 
-const Popup = () => {
+const WatchTimeContext = React.createContext<Record<string, number>>({});
+
+const Popup = ({
+  watchTimeData,
+}: {
+  watchTimeData: Record<string, number>;
+}) => {
   const [count, setCount] = useState(0);
   const [currentURL, setCurrentURL] = useState<string>();
 
@@ -44,6 +51,14 @@ const Popup = () => {
       >
         count up
       </button>
+      <div>hello world</div>
+      <div> {watchTimeData.toString()} </div>
+      {
+        <WatchTimeContext.Provider value={watchTimeData}>
+          <div> {watchTimeData.toString()} </div>
+        </WatchTimeContext.Provider>
+      }
+      <WatchTimeData watchTimeData={watchTimeData} />
       <button onClick={changeBackground}>change background</button>
     </>
   );
@@ -51,8 +66,15 @@ const Popup = () => {
 
 const root = createRoot(document.getElementById("root")!);
 
-root.render(
-  <React.StrictMode>
-    <Popup />
-  </React.StrictMode>
-);
+const port = chrome.runtime.connect({ name: "watch-time-data" });
+
+port.onMessage.addListener((watchTimeData) => {
+  root.render(
+    <React.StrictMode>
+      <Popup watchTimeData={watchTimeData} />
+    </React.StrictMode>
+  );
+});
+
+// Add a message to the background script to request the watch time data
+port.postMessage({ action: "getWatchTimeData" });
