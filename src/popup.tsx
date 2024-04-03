@@ -7,6 +7,7 @@ const Popup: React.FC = () => {
   const [watchTimeData, setWatchTimeData] = useState<WatchTimeData>({});
 
   useEffect(() => {
+    console.log("Popup component mounted");
     const port = chrome.runtime.connect({ name: "watch-time-data" });
 
     port.onMessage.addListener((data: WatchTimeData) => {
@@ -14,6 +15,16 @@ const Popup: React.FC = () => {
     });
 
     port.postMessage({ action: "getWatchTimeData" });
+
+    // Listen for storage changes and update the watchTimeData state
+    chrome.storage.sync.get("watchTimeData", (data) => {
+      setWatchTimeData(data.watchTimeData || {});
+    });
+    chrome.storage.onChanged.addListener((changes) => {
+      if (changes.watchTimeData) {
+        setWatchTimeData(changes.watchTimeData.newValue);
+      }
+    });
   }, []);
 
   return (
