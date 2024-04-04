@@ -9,6 +9,7 @@ chrome.runtime.onConnect.addListener((port) => {
   if (port.name === "watch-time-data") {
     console.log("Connected to watch-time-data port");
     port.onMessage.addListener((message) => {
+      console.log("Received message:", message);
       if (message.action === "getWatchTimeData") {
         port.postMessage(watchTimeData);
       } else if (message.action === "updateWatchTimeData") {
